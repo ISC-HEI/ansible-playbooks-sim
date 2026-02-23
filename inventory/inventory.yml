@@ -10,7 +10,6 @@ test_inv:
     zabbix_server: srv-ubuntu-main
     syslog_server: srv-ubuntu-main
     ansible_python_interpreter: /usr/bin/python3
-    ansible_host_key_checking: false
     dockerfile: custom_ubuntu_24_04
     mailer:
       server: smtp.example.com
