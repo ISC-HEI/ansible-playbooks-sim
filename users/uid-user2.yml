@@ -1,0 +1,6 @@
+uid_user2:
+  - {  id: '2002', name: 'toto', shell: '/bin/bash'    }
+  - {  id: '2003', name: 'tata', shell: '/bin/bash'    }
+
+guid_user2:
+  - { id: '2002', name: 'user2'}
