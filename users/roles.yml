@@ -2,9 +2,7 @@ global_admins_uids:
   - uid_admin
 
 global_admins_gids:
-  - ubuntu
-  - alice
-  - bob
+  - gid_admin
 
 test_uids:
   - uid_user1
