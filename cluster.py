@@ -62,9 +62,9 @@ def generate_docker_compose(data, sessionId):
         session_num = int(sessionId[1:])
     except ValueError:
         session_num = 0
-    
-    subnet_prefix = f"172.{19 + session_num}" 
-    
+
+    subnet_prefix = f"172.{19 + session_num}"
+
     host_ip_map = {}
     ip_counter = 2
     for group in children.values():
@@ -73,7 +73,7 @@ def generate_docker_compose(data, sessionId):
             ip_counter += 1
 
     all_extra_hosts = [f"{name}:{ip}" for name, ip in host_ip_map.items()]
-    
+
     for group in children.values():
         for host, host_vars in group.get("hosts", {}).items():
             assigned_ip = host_ip_map[host]
@@ -144,7 +144,7 @@ def check_dependencies():
         logging.debug(f"Checking for {tool}.")
         if shutil.which(tool) is None:
             missing.append(tool)
-    
+
     if "docker" not in missing:
         logging.debug("Checking for docker compose.")
         result = subprocess.run(["docker", "compose", "version"], capture_output=True)
@@ -252,14 +252,14 @@ def generate_session_inventory(data, sessionId, output_path):
     root = data[root_name] if root_name else data
     vars_root = root.get("vars", {})
     ansible_pass = vars_root.get("ansible_ssh_pass", "password")
-    
+
     jump_host_base_port = 22
     for group in root.get("children", {}).values():
             for host_name, host_vars in group.get("hosts", {}).items():
                 if host_vars and host_vars.get("is_entry_point") is True:
                     jump_host_base_port = host_vars.get("ansible_port", 22)
                     break
-    
+
     jump_port = session_port_offset(jump_host_base_port, sessionId)
     ansible_user = vars_root.get("ansible_user", "ubuntu")
 
@@ -391,7 +391,7 @@ def stop():
             ])
         logging.debug("Removing temp directory")
         shutil.rmtree(TEMP_DIRECTORY)
-        
+
 def sessions(verbose):
     sessions = get_all_sessions()
     if (sessions):
