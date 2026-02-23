@@ -381,6 +381,12 @@ def stop():
                 "docker", "compose",
                 "-p", s.lower(),
                 "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
+                "kill"
+            ])
+            run_cmd([
+                "docker", "compose",
+                "-p", s.lower(),
+                "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
                 "down"
             ])
         logging.debug("Removing temp directory")

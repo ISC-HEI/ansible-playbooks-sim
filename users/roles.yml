@@ -1,11 +1,15 @@
-global_admins:
+global_admins_uids:
+  - uid_admin
+
+global_admins_gids:
   - ubuntu
   - alice
   - bob
 
-test_users:
-  - titi
-  - tutu
+test_uids:
+  - uid_user1
+  - uid_user2
 
-test_groups:
-  - testgroup
+test_gids:
+  - gid_user1
+  - gid_user2

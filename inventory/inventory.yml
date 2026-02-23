@@ -2,9 +2,11 @@ test_inv:
   vars:
     ansible_user: ubuntu
     ansible_ssh_pass: password
-    users: test_users
-    admins: global_admins
-    usergroups: test_groups
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    admin_uids: global_admins_uids
+    admin_gids: global_admins_gids
+    uids: test_uids
+    gids: test_gids
     zabbix_server: srv-ubuntu-main
     syslog_server: srv-ubuntu-main
     ansible_python_interpreter: /usr/bin/python3
