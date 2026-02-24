@@ -30,6 +30,6 @@ test_inv:
       hosts:
         srv-ubuntu-main:
           ansible_port: 2220
-          usergroups: null
-          users: null
+          uids: null
+          gids: null
           is_entry_point: true
