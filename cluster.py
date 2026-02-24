@@ -136,7 +136,7 @@ def path_exist(path):
         sys.exit(1)
 
 def check_dependencies():
-    logging.info("Checking dependencies...")
+    logging.debug("Checking dependencies...")
     dependencies = ["docker", "sshpass", "ansible-playbook"]
     missing = []
 
