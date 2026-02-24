@@ -1,6 +1,4 @@
-<div align="center">
-
-# Ansible virtual cluster generator
+# Ansible virtual cluster
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)
 ![Ansible](https://img.shields.io/badge/Ansible-000000?style=for-the-badge&logo=ansible&logoColor=white)
@@ -8,57 +6,90 @@
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-Apache-red.svg?style=for-the-badge)
 
-Dynamically generate isolated Ansible test clusters using Docker Compose,
-directly from an Ansible inventory.
 
-This project is designed to safely validate Ansible playbooks without impacting
-the real infrastructure.
+Test playbooks on a virtual cluster.
 
-</div>
+The (virtual) cluster is generated from an Ansible inventory, and playbooks can
+be run without fear on the virtual infrastructure.
 
+This repository will also provide an example and documentation for the
+configuration required for our [playbooks](https://github.com/ISC-HEI/ansible-playbooks).
 
-## Overview
-
-This tool converts an Ansible inventory into a fully isolated Docker-based cluster:
-
-- Each Ansible host is mapped to a Docker container
-- SSH access is preserved
-- Port conflicts are avoided using session-based offsets
-- Multiple clusters can run in parallel
-- No modification is made to the host system
-
-It is especially useful for testing playbooks such as:
-https://github.com/ISC-HEI/ansible-playbooks
-
+## Limitations
+Since the virtual cluster is based on docker, some operations are restricted,
+for instance:
+  * All operations modifying kernel parameters (modules changes, ..., changing `/proc` or `/sys` parameters, network changes)
+  * Modifying `/etc/hosts`
 
 ## Key Features
 
 - Infrastructure-as-Inventory  
   The Ansible inventory defines the entire cluster topology.
 
-- Session-based isolation  
+- Session-based cluster isolation
+
+  Multiple cluster can be run at the same time
+
   Each cluster runs in its own session (S01, S02, …).
 
-- Automatic Docker Compose generation  
+- Automatic Docker Compose generation
   No manual Docker configuration is required.
 
 - Playbook execution  
   Run Ansible ping or full playbooks against the cluster.
 
-- Clean lifecycle  
+- Clean lifecycle
   Start, test, and destroy clusters cleanly.
 
 - Menu for easy utilisation.
 
+- `ssh` can be used to inspect the machines
 
-## Architecture
 
-Ansible Inventory  
--  Session Inventory (localhost with port offsets)  
-- docker-compose.yml  
-- Docker containers (SSH enabled)  
-- ansible / ansible-playbook execution
+## In brief
 
+1. Start a cluster:
+   ```bash
+   ./cluster.py start -i inventory
+   INFO: Your session id is S01
+   INFO: Building docker image 'custom_ubuntu_24_04'
+   INFO: Building docker image 'custom_ubuntu_22_04'
+   INFO: Starting containers...
+   ```
+1. (Ansible) ping all machines
+   ```bash
+   ./cluster.py start run
+   INFO: Pinging all hosts in inventory /home/REDACTED/.config/ansible-sample-conf/inventory-S01.yml (session S01)...
+   srv-ubuntu-02 | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   srv-ubuntu-01 | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   srv-ubuntu-03 | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   srv-ubuntu-05 | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   srv-ubuntu-04 | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   srv-ubuntu-main | SUCCESS => {
+       "changed": false,
+       "ping": "pong"
+   }
+   ```
+1. Stop the cluster:
+```bash
+./cluster.py stop
+INFO: Cleaning up session S01
+```
 
 ## Prerequisites
 
@@ -72,32 +103,38 @@ The following tools are required:
 
 ## Installation
 
-Clone this repository:
+1. Clone the playbooks repository:
+   ```bash
+   git clone https://github.com/ISC-HEI/ansible-playbooks.git
+   cd ansible-playbooks
+   ```
+1. Configure it: `setup.cfg`
+   ```properties
+   CONF_REPO_URL=git@github.com:ISC-HEI/ansible-sample-conf.git
+   VAULT_PASSWORD_FILE=UNUSED                             
+   ```
+1. Setup:
+   ```bash
+   ./setup.sh
+   Cloning into 'conf'...
+   remote: Enumerating objects: 224, done.
+   remote: Counting objects: 100% (224/224), done.
+   remote: Compressing objects: 100% (131/131), done.
+   remote: Total 224 (delta 113), reused 176 (delta 74), pack-reused 0 (from 0)
+   Receiving objects: 100% (224/224), 47.44 KiB | 490.00 KiB/s, done.
+   Resolving deltas: 100% (113/113), done.
+   ```
+1. Activate a Python virtual environment:
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
 
-```bash
-git clone https://github.com/ISC-HEI/ansible-sample-conf.git
-cd ansible-sample-conf
-```
+1. Install dependencies:
 
-(Optional) Clone the playbooks repository:
-
-```bash
-cd ..
-git clone https://github.com/ISC-HEI/ansible-playbooks.git
-```
-
-Activate a Python virtual environment:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Usage
 
@@ -121,7 +158,7 @@ The entry point for CLI commands is:
 Create a new isolated cluster session from an Ansible inventory:
 
 ```bash
-./cluster.py start -i inventory/inventory.yml
+./cluster.py start -i inventory/
 ```
 
 This will:
@@ -142,13 +179,13 @@ Ping all hosts in the active session:
 Run a specific playbook:
 
 ```bash
-./cluster.py run -t path/to/playbook.yml
+./cluster.py run -t ../motd.yml
 ```
 
 If multiple sessions exist, specify one:
 
 ```bash
-./cluster.py run -s S02
+./cluster.py run -s S02 -t ../motd.yml
 ```
 
 
@@ -175,19 +212,12 @@ Stop all running clusters:
 ./cluster.py stop
 ```
 
-Stop clusters and remove Docker images:
-
-```bash
-./cluster.py stop --rmi
-```
-
-
 ## Example Workflow
 
 ```bash
 ./cluster.py start -i inventory/inventory.yml
 ./cluster.py run
-./cluster.py run -t playbooks/site.yml
+./cluster.py run -t ../motd.yml
 ./cluster.py stop
 ```
 
