@@ -149,6 +149,13 @@ Create a new isolated cluster session from an Ansible inventory:
 ./cluster.py start -i inventory/
 ```
 
+You can even start directely a playbook:
+
+```bash
+./cluster.py start -i inventory/ -t ../motd.yml
+```
+> **Note:** You can add --remove to delete this session right after.
+
 This will:
 
 - Create a new session (S01, S02, …)
@@ -232,6 +239,12 @@ Stop all running clusters:
 
 ```bash
 ./cluster.py stop
+```
+
+Stop a specific session
+
+```bash
+./cluster.py stop -s S02
 ```
 
 ## Example Workflow

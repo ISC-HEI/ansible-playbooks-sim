@@ -108,7 +108,34 @@ def run_cluster():
     run_cluster_command("run", ["-s", session] + args)
 
 def stop_cluster():
-    run_cluster_command("stop")
+    sessions = get_all_sessions()
+    if not sessions:
+        print(bold("No active sessions found."))
+        return
+
+    if len(sessions) == 1:
+        session = next(iter(sessions))
+        confirm = input(bold(f"Stop session {session}? (Y/n): ")).strip().lower()
+        if confirm in ["", "y", "yes"]:
+            run_cluster_command("stop", ["-s", session])
+    else:
+        options = [f"{sid}  ->  {path}" for sid, path in sessions.items()]
+        options.append("ALL - Stop all active sessions")
+
+        menu = TerminalMenu(
+            options,
+            title="Select a session to stop or choose ALL"
+        )
+
+        index = menu.show()
+        if index is None:
+            return
+
+        if index == len(options) - 1:
+            run_cluster_command("stop")
+        else:
+            session = options[index].split()[0]
+            run_cluster_command("stop", ["-s", session])
 
 def show_sessions():
     verbose = input(bold("Verbose output? (y/N): ")).strip().lower()

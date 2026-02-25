@@ -304,7 +304,7 @@ def session_port_offset(base_port, sessionId):
 
 # Functions link to command
 
-def start(inventory, test_path):
+def start(inventory, test_path, delete):
     logging.debug(f"Using inventory: {inventory}")
     sessionId = create_session(inventory)
     logging.info(f"Your session id is {sessionId}")
@@ -338,6 +338,8 @@ def start(inventory, test_path):
             ])
         if (test_path):
             run(test_path, sessionId)
+            if (delete):
+                stop(sessionId)
     except subprocess.CalledProcessError:
         logging.error("Error starting Docker containers")
         sys.exit(1)
@@ -379,25 +381,46 @@ def run(test_path, sessionId, extra_args=None):
         logging.debug(f"command:'{command}'")
         subprocess.run(command)
 
-def stop():
+def stop(sessionId=None):
     sessions = get_all_sessions()
-    if (sessions):
-        for s in sessions:
-            logging.info(f"Cleaning up session {s}")
+    if not sessions:
+        logging.info("No active sessions to stop.")
+        return
+
+    target_sessions = [sessionId] if sessionId else list(sessions.keys())
+
+    for s in target_sessions:
+        if s not in sessions:
+            logging.error(f"Session {s} does not exist.")
+            continue
+            
+        logging.info(f"Cleaning up session {s}")
+        compose_file = f"{TEMP_DIRECTORY}/docker-compose-{s}.yml"
+        
+        if os.path.exists(compose_file):
             run_cmd([
                 "docker", "compose",
                 "-p", s.lower(),
-                "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
+                "-f", compose_file,
                 "kill"
             ])
             run_cmd([
                 "docker", "compose",
                 "-p", s.lower(),
-                "-f", f"{TEMP_DIRECTORY}/docker-compose-{s}.yml",
+                "-f", compose_file,
                 "down"
             ])
-        logging.debug("Removing temp directory")
-        shutil.rmtree(TEMP_DIRECTORY)
+            os.remove(compose_file)
+            inv_file = f"{TEMP_DIRECTORY}/inventory-{s}.yml"
+            if os.path.exists(inv_file): os.remove(inv_file)
+
+    new_sessions = {k: v for k, v in sessions.items() if k not in target_sessions}
+    if not new_sessions:
+        if os.path.exists(MEMO_FILE): os.remove(MEMO_FILE)
+        if os.path.exists(TEMP_DIRECTORY): shutil.rmtree(TEMP_DIRECTORY)
+    else:
+        with open(MEMO_FILE, "w") as f:
+            json.dump(new_sessions, f, indent=2)
 
 def sessions(verbose):
     sessions = get_all_sessions()
@@ -478,6 +501,7 @@ def main():
     start_parser = subparsers.add_parser("start", help="Start the virtual cluster", parents=[parent_parser])
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
     start_parser.add_argument("-t", "--test", help="Playbook path")
+    start_parser.add_argument("--remove", action="store_true", help="Remove the session, usefull with the --test flag")
 
 
     # RUN
@@ -488,7 +512,8 @@ def main():
     run_parser.add_argument("extra_ansible_args", nargs=argparse.REMAINDER, help="All extra args for ansible")
 
     # STOP
-    subparsers.add_parser("stop", help="Stop the virtual cluster", parents=[parent_parser])
+    stop_parser = subparsers.add_parser("stop", help="Stop the virtual cluster", parents=[parent_parser])
+    stop_parser.add_argument("-s", "--session", help="The session ID to stop, if empty stops all")
 
     # SESSIONS
     session_parser = subparsers.add_parser("sessions", help="Show all the active sessions")
@@ -522,10 +547,11 @@ def main():
     match args.command:
         case "start":
             path_exist(INVENTORY)
+            delete = getattr(args, "remove", False)
             if TEST_PATH:
                 for path in TEST_PATH.split(","):
                     path_exist(path.strip())
-            start(INVENTORY, TEST_PATH)
+            start(INVENTORY, TEST_PATH, delete)
         case "run":
             if INVENTORY: path_exist(INVENTORY)
             if TEST_PATH:
@@ -533,7 +559,7 @@ def main():
                     path_exist(path.strip())
             run(TEST_PATH, sessionId, extra_ansible_args)
         case "stop":
-            stop()
+            stop(sessionId)
         case "sessions":
             sessions(args.verbose)
         case "shell":
