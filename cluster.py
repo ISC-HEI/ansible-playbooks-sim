@@ -9,6 +9,7 @@ import json
 import shutil
 import socket
 import logging
+import re
 from pathlib import Path
 
 TEMP_DIRECTORY = Path.home() / ".config/ansible-sample-conf"
@@ -458,6 +459,63 @@ def shell(machine_name, sessionId, command=None):
     except Exception as e:
         logging.error(f"Could not connect to {machine_name}: {e}")
 
+def ssh(machine_name, sessionId):
+    sessions = get_all_sessions()
+    if not sessions:
+        logging.error("Error: no active sessions found.")
+        sys.exit(1)
+
+    if not sessionId:
+        if len(sessions) == 1:
+            sessionId = list(sessions.keys())[0]
+        else:
+            logging.error(f"Multiple sessions active: {list(sessions.keys())}. Use -s [ID]")
+            sys.exit(1)
+
+    inventory_path = sessions[sessionId]["path"]
+    with open(inventory_path, "r") as f:
+        inv_data = yaml.safe_load(f)
+    
+    root_key = "test_inv" if "test_inv" in inv_data else None
+    root = inv_data[root_key] if root_key else inv_data
+    vars_root = root.get("vars", {})
+    
+    ansible_user = vars_root.get("ansible_user", "ubuntu")
+    ansible_pass = vars_root.get("ansible_ssh_pass", "password")
+
+    logging.info(f"Connecting to {machine_name} via SSH (session {sessionId})...")
+    
+    cmd = ["sshpass", "-p", ansible_pass, "ssh", "-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null"]
+    
+    found = False
+    for group in root.get("children", {}).values():
+        if machine_name in group.get("hosts", {}):
+            host_vars = group["hosts"][machine_name]
+            target_host = host_vars.get("ansible_host", machine_name)
+            target_port = host_vars.get("ansible_port", 22)
+            
+            if host_vars.get("is_entry_point"):
+                cmd.extend(["-p", str(target_port), f"{ansible_user}@127.0.0.1"])
+            else:
+                proxy_args = host_vars.get("ansible_ssh_common_args", "")
+                if "ProxyCommand" in proxy_args:
+                    match = re.search(r"ProxyCommand='(.*)'", proxy_args)
+                    if match:
+                        cmd.extend(["-o", f"ProxyCommand={match.group(1)}"])
+                
+                cmd.extend([f"{ansible_user}@{target_host}"])
+            found = True
+            break
+    
+    if not found:
+        logging.error(f"Machine {machine_name} not found in inventory.")
+        sys.exit(1)
+
+    try:
+        subprocess.run(cmd)
+    except Exception as e:
+        logging.error(f"SSH connection failed: {e}")
+
 def ping(sessionId):
     sessions = get_all_sessions()
 
@@ -525,6 +583,11 @@ def main():
     shell_parser.add_argument("cmd", nargs="?", default=None, help="The command to execute (optional)")
     shell_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
+    # SSH
+    ssh_parser = subparsers.add_parser("ssh", help="Connect to a machine using SSH", parents=[parent_parser])
+    ssh_parser.add_argument("machine", help="The machine name")
+    ssh_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
+
     # PING
     ping_parser = subparsers.add_parser("ping", help="Ping hosts", parents=[parent_parser])
     ping_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
@@ -564,6 +627,8 @@ def main():
             sessions(args.verbose)
         case "shell":
             shell(args.machine, args.session, args.cmd)
+        case "ssh":
+            ssh(args.machine, args.session)
         case "ping":
             ping(sessionId)
 

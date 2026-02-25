@@ -219,7 +219,7 @@ Verbose mode:
 
 ## Execute Commands On A Machine
 
-Open an interactive shell
+### Open an interactive shell
 
 ```bash
 ./cluster.py shell MACHINE_NAME
@@ -229,6 +229,12 @@ Execute a specific command
 
 ```bash
 ./cluster.py shell MACHINE_NAME COMMAND
+```
+
+### Connect via SSH
+
+```bash
+./cluster.py ssh MACHINE_NAME
 ```
 
 > **Note**: If multiple sessions are active, use `-s` to specify the target session (e.g., -s S01).
