@@ -367,7 +367,9 @@ def run(inventory, test_path, sessionId):
 
     if test_path:
         logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
-        subprocess.run(["ansible-playbook", "-i", inventory, test_path, "-e", "h=all"])
+        command = ["ansible-playbook", "-i", inventory, test_path, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
+        logging.debug(f"command:'{command}'")
+        subprocess.run(command)
     else:
         logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
         subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
