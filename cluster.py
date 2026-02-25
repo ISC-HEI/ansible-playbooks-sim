@@ -444,17 +444,18 @@ def main():
 
     check_dependencies()
 
-    if args.command == "start":
-        path_exist(INVENTORY)
-        start(INVENTORY)
-    elif args.command == "run":
-        if INVENTORY: path_exist(INVENTORY)
-        if TEST_PATH: path_exist(TEST_PATH)
-        run(INVENTORY, TEST_PATH, sessionId)
-    elif args.command == "stop":
-        stop()
-    elif args.command == "sessions":
-        sessions(args.verbose)
+    match args.command:
+        case "start":
+            path_exist(INVENTORY)
+            start(INVENTORY)
+        case "run":
+            if INVENTORY: path_exist(INVENTORY)
+            if TEST_PATH: path_exist(TEST_PATH)
+            run(INVENTORY, TEST_PATH, sessionId)
+        case "stop":
+            stop()
+        case "sessions":
+            sessions(args.verbose)
 
 if __name__ == "__main__":
     main()
