@@ -304,7 +304,7 @@ def session_port_offset(base_port, sessionId):
 
 # Functions link to command
 
-def start(inventory):
+def start(inventory, test_path):
     logging.debug(f"Using inventory: {inventory}")
     sessionId = create_session(inventory)
     logging.info(f"Your session id is {sessionId}")
@@ -336,6 +336,8 @@ def start(inventory):
                 "-f", f"{TEMP_DIRECTORY}/docker-compose-{sessionId}.yml",
                 "up", "-d", "--build"
             ])
+        if (test_path):
+            run(test_path, sessionId)
     except subprocess.CalledProcessError:
         logging.error("Error starting Docker containers")
         sys.exit(1)
@@ -473,6 +475,8 @@ def main():
     # START
     start_parser = subparsers.add_parser("start", help="Start the virtual cluster", parents=[parent_parser])
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
+    start_parser.add_argument("-t", "--test", help="Playbook path")
+
 
     # RUN
     run_parser = subparsers.add_parser("run", help="Run playbook on hosts", parents=[parent_parser])
@@ -516,7 +520,7 @@ def main():
     match args.command:
         case "start":
             path_exist(INVENTORY)
-            start(INVENTORY)
+            start(INVENTORY, TEST_PATH)
         case "run":
             if INVENTORY: path_exist(INVENTORY)
             if TEST_PATH: path_exist(TEST_PATH)
