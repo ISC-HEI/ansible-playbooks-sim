@@ -15,6 +15,7 @@ TEMP_DIRECTORY = Path.home() / ".config/ansible-sample-conf"
 MEMO_FILE = f"{TEMP_DIRECTORY}/cluster_session.json"
 DOCKERFILES_DIRECTORY = "./Dockerfiles"
 DEBUG_LEVEL = 0
+EXTRA_ARGS_DELIMITER = "--"
 
 os.makedirs(TEMP_DIRECTORY, exist_ok=True)
 
@@ -339,7 +340,10 @@ def start(inventory):
         logging.error("Error starting Docker containers")
         sys.exit(1)
 
-def run(inventory, test_path, sessionId):
+def run(inventory, test_path, sessionId, extra_args=None):
+    if extra_args and extra_args[0] == EXTRA_ARGS_DELIMITER:
+        extra_args.pop(0)
+
     sessions = get_all_sessions()
 
     if not sessions:
@@ -368,11 +372,18 @@ def run(inventory, test_path, sessionId):
     if test_path:
         logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
         command = ["ansible-playbook", "-i", inventory, test_path, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
+
+        if extra_args:
+            command.extend(extra_args)
+
         logging.debug(f"command:'{command}'")
         subprocess.run(command)
     else:
         logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
         subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
+
+        if extra_args:
+            command.extend(extra_args)
 
 def stop():
     sessions = get_all_sessions()
@@ -426,6 +437,8 @@ def main():
     run_parser.add_argument("-i", "--inventory", help="Inventory YAML file or directory path")
     run_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
+    run_parser.add_argument("extra_ansible_args", nargs=argparse.REMAINDER, help="All extra args for ansible")
+
     # STOP
     subparsers.add_parser("stop", help="Stop the virtual cluster", parents=[parent_parser])
 
@@ -434,6 +447,8 @@ def main():
     session_parser.add_argument("-v", "--verbose", help="Show all the infos about a session", action="store_true")
 
     args = parser.parse_args()
+
+    extra_ansible_args = getattr(args, "extra_ansible_args", [])
 
     global INVENTORY, TEST_PATH
     INVENTORY = getattr(args, "inventory", None)
@@ -453,7 +468,7 @@ def main():
         case "run":
             if INVENTORY: path_exist(INVENTORY)
             if TEST_PATH: path_exist(TEST_PATH)
-            run(INVENTORY, TEST_PATH, sessionId)
+            run(INVENTORY, TEST_PATH, sessionId, extra_ansible_args)
         case "stop":
             stop()
         case "sessions":

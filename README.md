@@ -176,6 +176,12 @@ If multiple sessions exist, specify one:
 ./cluster.py run -s S02 -t ../motd.yml
 ```
 
+If you want to add more params to ansible command, add it after : 
+```bash
+./cluster.py run -t ../motd.yml -- --extra-vars "titi=tutu" --start-at-task "somewhere"
+```
+> It will take all the params after the `--`.
+
 
 ## List Active Sessions
 
