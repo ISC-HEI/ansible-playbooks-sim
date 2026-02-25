@@ -197,6 +197,21 @@ Verbose mode:
 ./cluster.py sessions -v
 ```
 
+## Execute Commands On A Machine
+
+Open an interactive shell
+
+```bash
+./cluster.py shell MACHINE_NAME
+```
+
+Execute a specific command
+
+```bash
+./cluster.py shell MACHINE_NAME COMMAND
+```
+
+> **Note**: If multiple sessions are active, use `-s` to specify the target session (e.g., -s S01).
 
 ## Stop and Cleanup
 

@@ -414,6 +414,33 @@ def sessions(verbose):
             else:
                 print(s)
 
+def shell(machine_name, sessionId, command=None):
+    sessions = get_all_sessions()
+    if not sessions:
+        logging.error("Error: no active sessions found.")
+        sys.exit(1)
+
+    if not sessionId:
+        if len(sessions) == 1:
+            sessionId = list(sessions.keys())[0]
+        else:
+            logging.error(f"Multiple sessions active: {list(sessions.keys())}. Use -s [ID]")
+            sys.exit(1)
+
+    container_name = f"{sessionId}-{machine_name}"
+    
+    docker_exec = ["docker", "exec", "-it", container_name]
+
+    if command:
+        docker_exec.extend(["sh", "-c", command])
+    else:
+        docker_exec.append("/bin/bash")
+
+    try:
+        subprocess.run(docker_exec)
+    except Exception as e:
+        logging.error(f"Could not connect to {machine_name}: {e}")
+
 # Main function
 
 def main():
@@ -446,6 +473,12 @@ def main():
     session_parser = subparsers.add_parser("sessions", help="Show all the active sessions")
     session_parser.add_argument("-v", "--verbose", help="Show all the infos about a session", action="store_true")
 
+    # SHELL
+    shell_parser = subparsers.add_parser("shell", help="Open a shell in a specific machine")
+    shell_parser.add_argument("machine", help="The machine name")
+    shell_parser.add_argument("cmd", nargs="?", default=None, help="The command to execute (optional)")
+    shell_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
+
     args = parser.parse_args()
 
     extra_ansible_args = getattr(args, "extra_ansible_args", [])
@@ -473,6 +506,8 @@ def main():
             stop()
         case "sessions":
             sessions(args.verbose)
+        case "shell":
+            shell(args.machine, args.session, args.cmd)
 
 if __name__ == "__main__":
     main()

@@ -117,6 +117,27 @@ def show_sessions():
         args.append("--verbose")
     run_cluster_command("sessions", args)
 
+def open_shell():
+    sessions = get_all_sessions()
+    if not sessions:
+        print(bold("No active sessions found."))
+        return
+
+    if len(sessions) == 1:
+        session = next(iter(sessions))
+        print(bold(f"Using session {session}"))
+    else:
+        session = select_session_menu()
+        if not session:
+            return
+
+    machine = input(bold("Machine name: ")).strip()
+    if not machine:
+        print("Machine name is required.")
+        return
+
+    run_cluster_command("shell", [machine, "-s", session])
+
 def choose_logging():
     global LOGGING_ARGS
 
@@ -156,6 +177,7 @@ def main():
         "Run - Run playbook or ping hosts",
         "Stop - Stop the virtual cluster",
         "Sessions - Show all the active sessions",
+        "Shell - Enter in a interactive shell",
         "Logging - Configure logging level",
         "Quit"
     ]
@@ -178,8 +200,10 @@ def main():
         elif choice == 3:
             show_sessions()
         elif choice == 4:
-            choose_logging()
+            open_shell()
         elif choice == 5:
+            choose_logging()
+        elif choice == 6:
             break
 
         input(bold("\nPress Enter to return to menu..."))
