@@ -103,33 +103,21 @@ The following tools are required:
 
 ## Installation
 
-1. Clone the playbooks repository:
+1. If not already done, clone the playbooks repository:
    ```bash
    git clone https://github.com/ISC-HEI/ansible-playbooks.git
    cd ansible-playbooks
    ```
-1. Configure it: `setup.cfg`
-   ```properties
-   CONF_REPO_URL=git@github.com:ISC-HEI/ansible-sample-conf.git
-   VAULT_PASSWORD_FILE=UNUSED                             
-   ```
-1. Setup:
+1. `ansible-playbook` will have it's every day config in the `conf` directory, so let's clone in `conf-sim`
    ```bash
-   ./setup.sh
-   Cloning into 'conf'...
-   remote: Enumerating objects: 224, done.
-   remote: Counting objects: 100% (224/224), done.
-   remote: Compressing objects: 100% (131/131), done.
-   remote: Total 224 (delta 113), reused 176 (delta 74), pack-reused 0 (from 0)
-   Receiving objects: 100% (224/224), 47.44 KiB | 490.00 KiB/s, done.
-   Resolving deltas: 100% (113/113), done.
+   git clone https://github.com/ISC-HEI/ansible-playbooks.git conf-sim
+   cd conf-sim
    ```
 1. Activate a Python virtual environment:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
    ```
-
 1. Install dependencies:
 
    ```bash
