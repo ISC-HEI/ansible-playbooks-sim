@@ -369,13 +369,15 @@ def run(test_path, sessionId, extra_args=None):
         sys.exit(1)
 
     logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
-    command = ["ansible-playbook", "-i", inventory, test_path, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
+    tests = test_path.split(",")
+    for test in tests:  
+        command = ["ansible-playbook", "-i", inventory, test, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
 
-    if extra_args:
-        command.extend(extra_args)
+        if extra_args:
+            command.extend(extra_args)
 
-    logging.debug(f"command:'{command}'")
-    subprocess.run(command)
+        logging.debug(f"command:'{command}'")
+        subprocess.run(command)
 
 def stop():
     sessions = get_all_sessions()
@@ -520,10 +522,15 @@ def main():
     match args.command:
         case "start":
             path_exist(INVENTORY)
+            if TEST_PATH:
+                for path in TEST_PATH.split(","):
+                    path_exist(path.strip())
             start(INVENTORY, TEST_PATH)
         case "run":
             if INVENTORY: path_exist(INVENTORY)
-            if TEST_PATH: path_exist(TEST_PATH)
+            if TEST_PATH:
+                for path in TEST_PATH.split(","):
+                    path_exist(path.strip())
             run(TEST_PATH, sessionId, extra_ansible_args)
         case "stop":
             stop()

@@ -176,6 +176,13 @@ Run a specific playbook:
 ./cluster.py run -t ../motd.yml
 ```
 
+Run multiple playbooks:
+
+```bash
+./cluster.py run -t ../motd.yml,../test.yml
+```
+> **Note** : Each playbook path is separated by a `,`
+
 If multiple sessions exist, specify one:
 
 ```bash
