@@ -340,7 +340,7 @@ def start(inventory):
         logging.error("Error starting Docker containers")
         sys.exit(1)
 
-def run(inventory, test_path, sessionId, extra_args=None):
+def run(test_path, sessionId, extra_args=None):
     if extra_args and extra_args[0] == EXTRA_ARGS_DELIMITER:
         extra_args.pop(0)
 
@@ -361,29 +361,19 @@ def run(inventory, test_path, sessionId, extra_args=None):
             logging.error("Error: multiple sessions found, please specify one with -s")
             sys.exit(1)
 
-    if inventory:
-        update_session(sessionId, inventory)
-    else:
-        inventory = sessions.get(sessionId)["path"]
-        if not inventory:
-            logging.error("Error: no inventory associated with this session")
-            sys.exit(1)
+    inventory = sessions.get(sessionId)["path"]
+    if not inventory:
+        logging.error("Error: no inventory associated with this session")
+        sys.exit(1)
 
-    if test_path:
-        logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
-        command = ["ansible-playbook", "-i", inventory, test_path, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
+    logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
+    command = ["ansible-playbook", "-i", inventory, test_path, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
 
-        if extra_args:
-            command.extend(extra_args)
+    if extra_args:
+        command.extend(extra_args)
 
-        logging.debug(f"command:'{command}'")
-        subprocess.run(command)
-    else:
-        logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
-        subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
-
-        if extra_args:
-            command.extend(extra_args)
+    logging.debug(f"command:'{command}'")
+    subprocess.run(command)
 
 def stop():
     sessions = get_all_sessions()
@@ -441,6 +431,32 @@ def shell(machine_name, sessionId, command=None):
     except Exception as e:
         logging.error(f"Could not connect to {machine_name}: {e}")
 
+def ping(sessionId):
+    sessions = get_all_sessions()
+
+    if not sessions:
+        logging.error("Error: no active session found. Please start a session first.")
+        sys.exit(1)
+
+    if sessionId:
+        if sessionId not in sessions:
+            logging.error(f"Error: session {sessionId} does not exist")
+            sys.exit(1)
+    else:
+        if len(sessions) == 1:
+            sessionId = next(iter(sessions))
+        else:
+            logging.error("Error: multiple sessions found, please specify one with -s")
+            sys.exit(1)
+
+    inventory = sessions.get(sessionId)["path"]
+    if not inventory:
+        logging.error("Error: no inventory associated with this session")
+        sys.exit(1)
+
+    logging.info(f"Pinging all hosts in inventory {inventory} (session {sessionId})...")
+    subprocess.run(["ansible", "all", "-m", "ping", "-i", inventory])
+
 # Main function
 
 def main():
@@ -459,9 +475,8 @@ def main():
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
 
     # RUN
-    run_parser = subparsers.add_parser("run", help="Run playbook or ping hosts", parents=[parent_parser])
-    run_parser.add_argument("-t", "--test", help="Optional playbook path")
-    run_parser.add_argument("-i", "--inventory", help="Inventory YAML file or directory path")
+    run_parser = subparsers.add_parser("run", help="Run playbook on hosts", parents=[parent_parser])
+    run_parser.add_argument("-t", "--test", required=True, help="Playbook path")
     run_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
     run_parser.add_argument("extra_ansible_args", nargs=argparse.REMAINDER, help="All extra args for ansible")
@@ -474,10 +489,14 @@ def main():
     session_parser.add_argument("-v", "--verbose", help="Show all the infos about a session", action="store_true")
 
     # SHELL
-    shell_parser = subparsers.add_parser("shell", help="Open a shell in a specific machine")
+    shell_parser = subparsers.add_parser("shell", help="Open a shell in a specific machine", parents=[parent_parser])
     shell_parser.add_argument("machine", help="The machine name")
     shell_parser.add_argument("cmd", nargs="?", default=None, help="The command to execute (optional)")
     shell_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
+
+    # PING
+    ping_parser = subparsers.add_parser("ping", help="Ping hosts", parents=[parent_parser])
+    ping_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
 
     args = parser.parse_args()
 
@@ -501,13 +520,15 @@ def main():
         case "run":
             if INVENTORY: path_exist(INVENTORY)
             if TEST_PATH: path_exist(TEST_PATH)
-            run(INVENTORY, TEST_PATH, sessionId, extra_ansible_args)
+            run(TEST_PATH, sessionId, extra_ansible_args)
         case "stop":
             stop()
         case "sessions":
             sessions(args.verbose)
         case "shell":
             shell(args.machine, args.session, args.cmd)
+        case "ping":
+            ping(sessionId)
 
 if __name__ == "__main__":
     main()

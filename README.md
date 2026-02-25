@@ -58,7 +58,7 @@ for instance:
    ```
 1. (Ansible) ping all machines
    ```bash
-   ./cluster.py start run
+   ./cluster.py ping
    INFO: Pinging all hosts in inventory /home/REDACTED/.config/ansible-sample-conf/inventory-S01.yml (session S01)...
    srv-ubuntu-02 | SUCCESS => {
        "changed": false,
@@ -156,13 +156,19 @@ This will:
 - Generate a session-specific inventory
 
 
-## Run Tests or Playbooks
-
-Ping all hosts in the active session:
+## Ping Hosts
 
 ```bash
-./cluster.py run
+./cluster.py ping
 ```
+
+If multiple sessions exist, specify one:
+
+```bash
+./cluster.py ping -s S02
+```
+
+## Run Tests or Playbooks
 
 Run a specific playbook:
 
@@ -224,7 +230,6 @@ Stop all running clusters:
 ## Example Workflow
 
 ```bash
-./cluster.py start -i inventory/inventory.yml
 ./cluster.py run
 ./cluster.py run -t ../motd.yml
 ./cluster.py stop

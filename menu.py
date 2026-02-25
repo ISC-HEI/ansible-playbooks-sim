@@ -81,7 +81,6 @@ def start_cluster():
         run_cluster_command("start", ["-i", inventory])
 
 def run_cluster():
-    inventory = input(bold("Inventory path (leave empty to reuse session inventory): ")).strip()
     test = input(bold("Playbook path (leave empty to ping hosts): ")).strip()
 
     sessions = get_all_sessions()
@@ -100,10 +99,11 @@ def run_cluster():
 
     args = []
 
-    if inventory:
-        args.extend(["-i", inventory])
     if test:
         args.extend(["-t", test])
+    else:
+        print(bold("Please specify a playbook path"))
+        return
 
     run_cluster_command("run", ["-s", session] + args)
 
@@ -137,6 +137,22 @@ def open_shell():
         return
 
     run_cluster_command("shell", [machine, "-s", session])
+
+def ping_hosts():
+    sessions = get_all_sessions()
+    if not sessions:
+        print(bold("No active sessions found."))
+        return
+
+    if len(sessions) == 1:
+        session = next(iter(sessions))
+        print(bold(f"Using session {session}"))
+    else:
+        session = select_session_menu()
+        if not session:
+            return
+        
+    run_cluster_command("ping", ["-s", session])
 
 def choose_logging():
     global LOGGING_ARGS
@@ -174,10 +190,11 @@ def choose_logging():
 def main():
     script_options = [
         "Start - Start the virtual cluster",
-        "Run - Run playbook or ping hosts",
+        "Run - Run playbook on hosts",
         "Stop - Stop the virtual cluster",
         "Sessions - Show all the active sessions",
         "Shell - Enter in a interactive shell",
+        "Ping - Ping the hosts",
         "Logging - Configure logging level",
         "Quit"
     ]
@@ -202,8 +219,10 @@ def main():
         elif choice == 4:
             open_shell()
         elif choice == 5:
-            choose_logging()
+            ping_hosts()
         elif choice == 6:
+            choose_logging()
+        elif choice == 7:
             break
 
         input(bold("\nPress Enter to return to menu..."))
