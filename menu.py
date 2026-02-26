@@ -73,6 +73,19 @@ def run_cluster_command(command, extra_args=[]):
     cmd = [sys.executable, "cluster.py"] + LOGGING_ARGS + [command] + extra_args
     subprocess.run(cmd)
 
+def get_or_select_session():
+    sessions = get_all_sessions()
+    if not sessions:
+        print(bold("No active sessions found."))
+        return None
+
+    if len(sessions) == 1:
+        session_id = next(iter(sessions))
+        print(bold(f"Using session {session_id}"))
+        return session_id
+    
+    return select_session_menu()
+
 # Commands
 
 def start_cluster():
@@ -83,19 +96,8 @@ def start_cluster():
 def run_cluster():
     test = input(bold("Playbook path (leave empty to ping hosts): ")).strip()
 
-    sessions = get_all_sessions()
-
-    if not sessions:
-        print(bold("No active sessions found."))
-        return
-
-    if len(sessions) == 1:
-        session = next(iter(sessions))
-        print(bold(f"Using session {session}"))
-    else:
-        session = select_session_menu()
-        if not session:
-            return
+    session = get_or_select_session()
+    if not session: return
 
     args = []
 
@@ -145,18 +147,8 @@ def show_sessions():
     run_cluster_command("sessions", args)
 
 def open_shell():
-    sessions = get_all_sessions()
-    if not sessions:
-        print(bold("No active sessions found."))
-        return
-
-    if len(sessions) == 1:
-        session = next(iter(sessions))
-        print(bold(f"Using session {session}"))
-    else:
-        session = select_session_menu()
-        if not session:
-            return
+    session = get_or_select_session()
+    if not session: return
 
     machine = input(bold("Machine name: ")).strip()
     if not machine:
@@ -166,18 +158,8 @@ def open_shell():
     run_cluster_command("shell", [machine, "-s", session])
 
 def open_ssh():
-    sessions = get_all_sessions()
-    if not sessions:
-        print(bold("No active sessions found."))
-        return
-
-    if len(sessions) == 1:
-        session = next(iter(sessions))
-        print(bold(f"Using session {session}"))
-    else:
-        session = select_session_menu()
-        if not session:
-            return
+    session = get_or_select_session()
+    if not session: return
 
     machine = input(bold("Machine name (SSH): ")).strip()
     if not machine:
@@ -187,18 +169,8 @@ def open_ssh():
     run_cluster_command("ssh", [machine, "-s", session])
 
 def ping_hosts():
-    sessions = get_all_sessions()
-    if not sessions:
-        print(bold("No active sessions found."))
-        return
-
-    if len(sessions) == 1:
-        session = next(iter(sessions))
-        print(bold(f"Using session {session}"))
-    else:
-        session = select_session_menu()
-        if not session:
-            return
+    session = get_or_select_session()
+    if not session: return
         
     run_cluster_command("ping", ["-s", session])
 
@@ -237,15 +209,15 @@ def choose_logging():
 
 def main():
     script_options = [
-        "Start - Start the virtual cluster",
-        "Run - Run playbook on hosts",
-        "Stop - Stop the virtual cluster",
-        "Sessions - Show all the active sessions",
-        "Shell - Enter in a interactive shell",
-        "SSH - Connect to a machine using SSH",
-        "Ping - Ping the hosts",
-        "Logging - Configure logging level",
-        "Quit"
+        "Start    - Start the virtual cluster",     # 0
+        "Stop     - Stop the virtual cluster",      # 1
+        "Run      - Run playbook on hosts",         # 2
+        "Ping     - Ping the hosts",                # 3
+        "Shell    - Enter in a interactive shell",  # 4
+        "SSH      - Connect to a machine using SSH",# 5
+        "Sessions - Show all the active sessions",  # 6
+        "Logging  - Configure logging level",       # 7
+        "Quit"                                      # 8
     ]
 
     terminal_menu = TerminalMenu(script_options,
@@ -258,26 +230,21 @@ def main():
         choice = terminal_menu.show()
 
         match choice:
-            case 0:
-                start_cluster()
-            case 1:
-                run_cluster()
-            case 2:
-                stop_cluster()
-            case 3:
-                show_sessions()
-            case 4:
-                open_shell()
-            case 5:
-                open_ssh()
-            case 6:
-                ping_hosts()
-            case 7:
-                choose_logging()
-            case 8:
-                break
+            case 0: start_cluster()
+            case 1: stop_cluster()
+            case 2: run_cluster()
+            case 3: ping_hosts()
+            case 4: open_shell()
+            case 5: open_ssh()
+            case 6: show_sessions()
+            case 7: choose_logging()
+            case 8: break
 
-        input(bold("\nPress Enter to return to menu..."))
-
+        try:
+            input(bold("\nPress Enter to return to menu..."))
+        except KeyboardInterrupt:
+                print("\nExiting...")
+                sys.exit(0)
+                
 if __name__ == "__main__":
     main()

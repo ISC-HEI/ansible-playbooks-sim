@@ -158,6 +158,24 @@ def check_dependencies():
         logging.error("Please install the missing tools before running this script.")
         sys.exit(1)
 
+def resolve_session_id(provided_id):
+    sessions = get_all_sessions()
+    if not sessions:
+        logging.error("Error: no active session found. Please start a session first.")
+        sys.exit(1)
+    
+    if provided_id:
+        if provided_id not in sessions:
+            logging.error(f"Error: session {provided_id} does not exist.")
+            sys.exit(1)
+        return provided_id
+    
+    if len(sessions) == 1:
+        return next(iter(sessions))
+    
+    logging.error(f"Multiple sessions active: {list(sessions.keys())}. Specify one with -s.")
+    sys.exit(1)
+
 # logging
 
 def setup_logging(quiet=False, debug=0):
@@ -349,31 +367,18 @@ def run(test_path, sessionId, extra_args=None):
     if extra_args and extra_args[0] == EXTRA_ARGS_DELIMITER:
         extra_args.pop(0)
 
+    sessionId = resolve_session_id(sessionId)
     sessions = get_all_sessions()
-
-    if not sessions:
-        logging.error("Error: no active session found. Please start a session first.")
-        sys.exit(1)
-
-    if sessionId:
-        if sessionId not in sessions:
-            logging.error(f"Error: session {sessionId} does not exist")
-            sys.exit(1)
-    else:
-        if len(sessions) == 1:
-            sessionId = next(iter(sessions))
-        else:
-            logging.error("Error: multiple sessions found, please specify one with -s")
-            sys.exit(1)
-
     inventory = sessions.get(sessionId)["path"]
+
     if not inventory:
         logging.error("Error: no inventory associated with this session")
         sys.exit(1)
 
     logging.info(f"Running playbook {test_path} on inventory {inventory} (session {sessionId})...")
     tests = test_path.split(",")
-    for test in tests:  
+    for test in tests:
+        path_exist(test)
         command = ["ansible-playbook", "-i", inventory, test, "-e", "conf_dir=" + os.path.dirname(os.path.abspath(__file__))]
 
         if extra_args:
@@ -433,18 +438,7 @@ def sessions(verbose):
                 print(s)
 
 def shell(machine_name, sessionId, command=None):
-    sessions = get_all_sessions()
-    if not sessions:
-        logging.error("Error: no active sessions found.")
-        sys.exit(1)
-
-    if not sessionId:
-        if len(sessions) == 1:
-            sessionId = list(sessions.keys())[0]
-        else:
-            logging.error(f"Multiple sessions active: {list(sessions.keys())}. Use -s [ID]")
-            sys.exit(1)
-
+    sessionId = resolve_session_id(sessionId)
     container_name = f"{sessionId}-{machine_name}"
     
     docker_exec = ["docker", "exec", "-it", container_name]
@@ -460,17 +454,8 @@ def shell(machine_name, sessionId, command=None):
         logging.error(f"Could not connect to {machine_name}: {e}")
 
 def ssh(machine_name, sessionId):
+    sessionId = resolve_session_id(sessionId)
     sessions = get_all_sessions()
-    if not sessions:
-        logging.error("Error: no active sessions found.")
-        sys.exit(1)
-
-    if not sessionId:
-        if len(sessions) == 1:
-            sessionId = list(sessions.keys())[0]
-        else:
-            logging.error(f"Multiple sessions active: {list(sessions.keys())}. Use -s [ID]")
-            sys.exit(1)
 
     inventory_path = sessions[sessionId]["path"]
     with open(inventory_path, "r") as f:
@@ -517,22 +502,8 @@ def ssh(machine_name, sessionId):
         logging.error(f"SSH connection failed: {e}")
 
 def ping(sessionId):
+    sessionId = resolve_session_id(sessionId)
     sessions = get_all_sessions()
-
-    if not sessions:
-        logging.error("Error: no active session found. Please start a session first.")
-        sys.exit(1)
-
-    if sessionId:
-        if sessionId not in sessions:
-            logging.error(f"Error: session {sessionId} does not exist")
-            sys.exit(1)
-    else:
-        if len(sessions) == 1:
-            sessionId = next(iter(sessions))
-        else:
-            logging.error("Error: multiple sessions found, please specify one with -s")
-            sys.exit(1)
 
     inventory = sessions.get(sessionId)["path"]
     if not inventory:
@@ -559,14 +530,12 @@ def main():
     start_parser = subparsers.add_parser("start", help="Start the virtual cluster", parents=[parent_parser])
     start_parser.add_argument("-i", "--inventory", required=True, help="Inventory YAML file or directory path")
     start_parser.add_argument("-t", "--test", help="Playbook path")
-    start_parser.add_argument("--remove", action="store_true", help="Remove the session, usefull with the --test flag")
-
+    start_parser.add_argument("--remove", action="store_true", help="Remove the session, useful with the --test flag")
 
     # RUN
     run_parser = subparsers.add_parser("run", help="Run playbook on hosts", parents=[parent_parser])
     run_parser.add_argument("-t", "--test", required=True, help="Playbook path")
     run_parser.add_argument("-s", "--session", help="The session ID, optional if only one session")
-
     run_parser.add_argument("extra_ansible_args", nargs=argparse.REMAINDER, help="All extra args for ansible")
 
     # STOP
@@ -594,43 +563,44 @@ def main():
 
     args = parser.parse_args()
 
-    extra_ansible_args = getattr(args, "extra_ansible_args", [])
-
-    global INVENTORY, TEST_PATH
-    INVENTORY = getattr(args, "inventory", None)
-    TEST_PATH = getattr(args, "test", None)
-    sessionId = getattr(args, "session", None)
-
     global DEBUG_LEVEL
     DEBUG_LEVEL = args.debug
     setup_logging(args.quiet, args.debug)
 
     check_dependencies()
 
-    match args.command:
-        case "start":
-            path_exist(INVENTORY)
-            delete = getattr(args, "remove", False)
-            if TEST_PATH:
-                for path in TEST_PATH.split(","):
-                    path_exist(path.strip())
-            start(INVENTORY, TEST_PATH, delete)
-        case "run":
-            if INVENTORY: path_exist(INVENTORY)
-            if TEST_PATH:
-                for path in TEST_PATH.split(","):
-                    path_exist(path.strip())
-            run(TEST_PATH, sessionId, extra_ansible_args)
-        case "stop":
-            stop(sessionId)
-        case "sessions":
-            sessions(args.verbose)
-        case "shell":
-            shell(args.machine, args.session, args.cmd)
-        case "ssh":
-            ssh(args.machine, args.session)
-        case "ping":
-            ping(sessionId)
+    try:
+        match args.command:
+            case "start":
+                path_exist(args.inventory)
+                start(args.inventory, args.test, args.remove)
+
+            case "run":
+                run(args.test, args.session, getattr(args, "extra_ansible_args", []))
+
+            case "stop":
+                stop(args.session)
+
+            case "sessions":
+                sessions(args.verbose)
+
+            case "shell":
+                shell(args.machine, args.session, args.cmd)
+
+            case "ssh":
+                ssh(args.machine, args.session)
+
+            case "ping":
+                ping(args.session)
+
+    except KeyboardInterrupt:
+        logging.info("\nOperation interrupted by user.")
+        sys.exit(0)
+    except Exception as e:
+        logging.error(f"An unexpected error occurred: {e}")
+        if DEBUG_LEVEL > 0:
+            raise
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
