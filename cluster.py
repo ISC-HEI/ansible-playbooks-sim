@@ -82,7 +82,7 @@ def generate_docker_compose(data, sessionId):
             docker_image = (host_vars.get("dockerfile") if host_vars else None) or dockerfile
 
             if docker_image and docker_image not in built_images:
-                create_docker_images(docker_image, sessionId)
+                create_docker_images(docker_image)
                 built_images.add(docker_image)
 
             service_config = {
@@ -126,6 +126,7 @@ def generate_docker_compose(data, sessionId):
     return docker_compose
 
 def is_port_open(port):
+    """Check if a port is open on the device"""
     try:
         with socket.create_connection(("127.0.0.1", port), timeout=1):
             return True
@@ -133,11 +134,13 @@ def is_port_open(port):
         return False
 
 def path_exist(path):
+    """Check if a path exist"""
     if not Path(path).exists():
         logging.error(f"Path {path} doesn't exist")
         sys.exit(1)
 
 def check_dependencies():
+    """Check that the device have the script dependencies"""
     logging.debug("Checking dependencies...")
     dependencies = ["docker", "sshpass", "ansible-playbook"]
     missing = []
@@ -159,6 +162,7 @@ def check_dependencies():
         sys.exit(1)
 
 def resolve_session_id(provided_id):
+    """Check if there's some active sessions and return the procided session or the menu to choose wich one use"""
     sessions = get_all_sessions()
     if not sessions:
         logging.error("Error: no active session found. Please start a session first.")
@@ -179,6 +183,7 @@ def resolve_session_id(provided_id):
 # logging
 
 def setup_logging(quiet=False, debug=0):
+    """Configure the logging level"""
     if quiet:
         level = logging.ERROR
     elif debug >= 1:
@@ -192,6 +197,7 @@ def setup_logging(quiet=False, debug=0):
     )
 
 def run_cmd(cmd):
+    """Run a command, include logs"""
     logging.debug(f"Running command: {' '.join(cmd)}")
 
     return subprocess.run(
@@ -203,9 +209,11 @@ def run_cmd(cmd):
 
 # docker images
 
-def create_docker_images(dockerfile, sessionId):
+def create_docker_images(dockerfile):
+    """Create a docker image from a dockerfile path"""
     image_name = dockerfile
     dockerfile_path = os.path.join(DOCKERFILES_DIRECTORY, f"Dockerfile.{dockerfile}")
+    path_exist(dockerfile_path)
     logging.info(f"Building docker image '{dockerfile}'")
     run_cmd(["docker", "build", "-t", image_name, "-f", dockerfile_path, "."])
 
@@ -248,6 +256,7 @@ def update_session(sessionId, path=None, entryIp=None):
         json.dump(sessions, f, indent=2)
 
 def get_session(sessionId):
+    """Get infos on a session from an Id"""
     if os.path.exists(MEMO_FILE):
         with open(MEMO_FILE, "r") as f:
             try:
@@ -268,6 +277,7 @@ def get_all_sessions():
     return None
 
 def generate_session_inventory(data, sessionId, output_path):
+    """Generate an inventory for adapt for this session"""
     root_name = "test_inv" if "test_inv" in data else None
     root = data[root_name] if root_name else data
     vars_root = root.get("vars", {})
@@ -316,6 +326,7 @@ def generate_session_inventory(data, sessionId, output_path):
         yaml.dump(session_inventory, f, sort_keys=False)
 
 def session_port_offset(base_port, sessionId):
+    """Return a new port with the session offset"""
     port = base_port + (int(sessionId[1:]) - 1) * 100
     while is_port_open(port):
         port += 10
