@@ -1,13 +1,22 @@
-global_admins_uids:
+sim_admins_uids:
   - uid_admin
 
-global_admins_gids:
+sim_admins_gids:
   - gid_admin
 
-test_uids:
+sim_uids:
   - uid_user1
   - uid_user2
 
-test_gids:
+sim_gids:
   - gid_user1
   - gid_user2
+
+sim_docker_uids:
+  - gid_user1
+
+gid_docker:
+  - { id: '1234', name: 'docker', system: true}
+
+sim_docker_gids:
+  - gid_docker

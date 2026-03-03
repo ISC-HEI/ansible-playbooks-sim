@@ -3,4 +3,4 @@ uid_user1:
   - {  id: '1003', name: 'tutu', shell: '/bin/bash'    }
 
 gid_user1:
-  - { id: '1002', name: 'user1'}
+  - { id: '3002', name: 'user1'}

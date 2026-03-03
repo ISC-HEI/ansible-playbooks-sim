@@ -3,10 +3,14 @@ test_inv:
     ansible_user: ubuntu
     ansible_ssh_pass: password
     ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
-    admin_uids: global_admins_uids
-    admin_gids: global_admins_gids
-    uids: test_uids
-    gids: test_gids
+    admins:
+      - uids: sim_admins_uids
+        gids: sim_admins_gids
+    users:
+      - uids: sim_uids
+        gids: sim_gids
+      - uids: sim_docker_uids
+        gids: sim_docker_gids
     zabbix_server: srv-ubuntu-main
     syslog_server: srv-ubuntu-main
     ansible_python_interpreter: /usr/bin/python3
@@ -23,13 +27,16 @@ test_inv:
         srv-ubuntu-02:
           dockerfile: custom_ubuntu_22_04
         srv-ubuntu-03:
+          users: null
         srv-ubuntu-04:
+          admins: null
         srv-ubuntu-05:
+          users: null
+          admins: null
 
     temp:
       hosts:
         srv-ubuntu-main:
           ansible_port: 2220
-          uids: null
-          gids: null
+          users: null
           is_entry_point: true
