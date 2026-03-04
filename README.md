@@ -108,10 +108,22 @@ The configuration is stored in `./conf` :
   ```yaml
   europa: # the cluster is named europa
     vars:
-      ansible_user: ubuntu # used by ansible for ssh connection, sudo -u root with no password is required
-      users: europa_users # group of users as defined in users/roles*.yml
-      admins: global_admins # group of users as defined in users/roles*.yml
-      usergroups: europa_groups # unix group of users defined in users/roles*.yml
+      # used by ansible for ssh connection
+      # this user MUST be able to `sudo -u root` without password
+      ansible_user: ubuntu #
+
+      # admins and users are a list of pair of uids+gids
+      # uids is a list of list of users
+      # gids is a list of list of groups
+      # see also user documentation
+      admins:
+       - uids: sim_admins_uids # map user with groups
+         gids: sim_admins_gids
+      users:
+       - uids: sim_uids # users from sim_uids will have groups from sim_gids
+         gids: sim_gids
+       - uids: sim_docker_uids # users from sim_docker_uids will have groups from sim_docker_gids
+         gids: sim_docker_gids
       zabbix_server: germany # this host will be the zabbix server for all europa machines
       syslog_server: italy   # syslog server for all europa machines
       mailer: # will configure monit and msmtp
@@ -137,7 +149,6 @@ The configuration is stored in `./conf` :
           europamain:
             ansible_host: 192.168.33.12
             users: null # only admins allowed, so prevent inherit from europa.users variable
-            usergroups: null
       workers: # workers is another group of machines
         hosts:
           worker00:
@@ -150,34 +161,64 @@ The configuration is stored in `./conf` :
         hosts:
           germany: # should host the zabbix server (not playbook available yet)
             ansible_host: 192.168.33.12
-            usergroups: null
+            admins: null # ansible_user will be admin
             users: null
           italy: # since italy is the syslog_server, it will be configured for receiving syslogs
             ansible_host: 192.168.33.13
-            usergroups: null
             users: null
   ```
-  :point_up: On every host `/etc/hosts` will be completed using ansible_host (if it is an IP address).
+  :point_up: On real cluster (not in `cluster.py`) every host `/etc/hosts` will be completed using `ansible_host` (if it is an IP address).
 
   ### `conf/users`
   :warning: Beware of name collision since all files in `users/*.yml` will be included.
 
   Groups and unix groups are defined like this:
   ```yaml
-  global_admins:
-    - ubuntu # the user defined as ansible_user must be an admin or root
-    - foo
-    - bar
+  sim_admins_uids:
+    - uid_admin
 
-  europa_users:
-    - titi
-    - tutu
+  sim_admins_gids:
+    - gid_admin
 
-  europa_groups:
-    - testgroup
+  sim_uids:
+    - uid_user1
+    - uid_user2
+
+  sim_gids:
+    - gid_user1
+    - gid_user2
+
+  sim_docker_uids:
+    - gid_user1
+
+  gid_docker:
+    # system: true -> will create a system group
+    # id is optional
+    - { name: 'docker', system: true}
+  sim_docker_gids:
+    - gid_docker
+
+  uid_admin:
+    - {  id: '1000', name: 'ubuntu', shell: '/bin/bash'    }
+    # shell is optional, defaults to bash
+    - {  id: '2000', name: 'alice', }
+    - {  id: '1001', name: 'bob', shell: '/usr/bin/zsh' }
+  gid_admin:
+    - { id: '141', name: 'testgroup'}
+  uid_user1:
+    - {  id: '1002', name: 'titi', shell: '/bin/bash'    }
+    - {  id: '1003', name: 'tutu', shell: '/bin/bash'    }
+
+  gid_user1:
+    - { id: '3002', name: 'user1'}
+  uid_user2:
+    - {  id: '2002', name: 'toto', shell: '/bin/bash'    }
+    - {  id: '2003', name: 'tata', shell: '/bin/bash'    }
+  gid_user2:
+    - { id: '2002', name: 'user2'}
   ```
 
-  :point_up: Variables with names starting with uid_ and gid_ will be merged into a globalb uid and gid array.
+  :point_up: id (in groups and in users) MUST be unique
 
   ```yaml
   uid_abc:
@@ -192,7 +233,6 @@ The configuration is stored in `./conf` :
   ```
 
   :warning: id (from uid and gid) are expected to be unique
-  :point_up: uid and gid are treated as recommendation -> the user or group created on the machine will use an unused uid/gid.
 
 ## Related Projects
 
