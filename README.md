@@ -167,7 +167,7 @@ The configuration is stored in `./conf` :
             ansible_host: 192.168.33.13
             users: null
   ```
-  :point_up: On real cluster (not in `cluster.py`) every host `/etc/hosts` will be completed using `ansible_host` (if it is an IP address).
+  :point_up: On the real cluster (not in `cluster.py`) every host `/etc/hosts` will be completed using `ansible_host` (if it is an IP address).
 
   ### `conf/users`
   :warning: Beware of name collision since all files in `users/*.yml` will be included.
