@@ -45,7 +45,6 @@ for instance:
 
 - `ssh` can be used to inspect the machines
 
-
 ## In brief
 
 1. Start a cluster:
@@ -140,7 +139,6 @@ The entry point for CLI commands is:
 ./cluster.py
 ```
 
-
 ## Start a cluster
 
 Create a new isolated cluster session from an Ansible inventory:
@@ -196,7 +194,7 @@ If multiple sessions exist, specify one:
 ./cluster.py run -s S02 -t ../motd.yml
 ```
 
-If you want to add more params to ansible command, add it after : 
+If you want to add more params to ansible command, add it after :
 ```bash
 ./cluster.py run -t ../motd.yml -- --extra-vars "titi=tutu" --start-at-task "somewhere"
 ```
@@ -276,7 +274,6 @@ web01:
   ansible_port: 22
 ```
 
-
 ## Important Limitations
 
 Because Docker containers share the host kernel:
@@ -291,10 +288,7 @@ You can customize the images in:
 Dockerfiles/Dockerfile.*
 ```
 
-
-## License
-
-Apache License 2.0
+## `conf` documentation
 
 
 ## Related Projects
