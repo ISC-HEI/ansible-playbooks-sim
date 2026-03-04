@@ -58,7 +58,7 @@ for instance:
 1. (Ansible) ping all machines
    ```bash
    ./cluster.py ping
-   INFO: Pinging all hosts in inventory /home/REDACTED/.config/ansible-sample-conf/inventory-S01.yml (session S01)...
+   INFO: Pinging all hosts in inventory /home/REDACTED/.config/ansible-sim-conf/inventory-S01.yml (session S01)...
    srv-ubuntu-02 | SUCCESS => {
        "changed": false,
        "ping": "pong"
