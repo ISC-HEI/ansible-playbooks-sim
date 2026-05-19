@@ -100,6 +100,7 @@ The configuration is stored in `./conf` :
   * `files/skel/` <- used as /etc/skel for users that have never logged in
   * `files/global/` <- here goes files
   * `authorized_keys/USER_NAME.pub` <- ssh public keys (same syntax as `authorized_keys`
+  * `authorized_keys/REVOKED.pub` <- list of revoked pulic keys
 
   ### `conf/inventory`
   :warning: Beware of name collision since all files in `inventory/*.yml` will be included.
